@@ -96,6 +96,29 @@ Selected **10 features** for modeling:
 - **Advantages**: Captures non-linear relationships, feature importance
 - **Use Case**: Advanced model, handling complex patterns
 
+#### Model 3: XGBoost Regressor
+- **Type**: Gradient Boosting framework
+- **Parameters**:
+  - `n_estimators=200` (200 boosting rounds)
+  - `max_depth=6` (tree depth)
+  - `learning_rate=0.1` (shrinkage)
+  - `random_state=42` (reproducibility)
+  - `n_jobs=-1` (parallel processing)
+- **Scaling**: No (tree-based, scale-invariant)
+- **Advantages**: State-of-the-art performance, handles missing values, regularization
+- **Use Case**: High-performance model for tabular data
+- **Note**: Falls back to GradientBoostingRegressor if XGBoost library not installed
+
+#### Model 4: Elastic Net
+- **Type**: Regularized linear regression (L1 + L2)
+- **Parameters**:
+  - `alpha=1.0` (regularization strength)
+  - `l1_ratio=0.5` (balance between L1 and L2)
+  - `random_state=42` (reproducibility)
+- **Scaling**: Yes (StandardScaler)
+- **Advantages**: Handles multicollinearity, feature selection, robust to outliers
+- **Use Case**: Addresses multicollinearity issues in Linear Regression
+
 ---
 
 ## 📈 Results & Performance Analysis
@@ -106,10 +129,12 @@ Selected **10 features** for modeling:
 |-------|-----|------|----------|
 | **Linear Regression** | **0.074** | **0.175** | **0.368** |
 | Random Forest | 0.068 | 0.185 | 0.289 |
+| XGBoost | 0.070 | 0.187 | 0.278 |
+| Elastic Net | 0.123 | 0.220 | -0.003 |
 
 ### Performance Interpretation
 
-#### Linear Regression (Winner)
+#### Linear Regression (Best Overall)
 - **MAE (0.074)**: Average prediction error of 0.074 goals per 90 minutes
   - Example: If actual = 0.5 goals/90, prediction typically within 0.43-0.57
 - **RMSE (0.175)**: Penalizes larger errors; indicates some outliers
@@ -118,13 +143,28 @@ Selected **10 features** for modeling:
   - Remaining 63.2% variance due to unmeasured factors
 
 #### Random Forest
-- **Better MAE** (0.068 vs 0.074): Slightly better average accuracy
+- **Best MAE** (0.068): Slightly better average accuracy than Linear Regression
 - **Worse RMSE** (0.185 vs 0.175): More large errors (overfitting risk)
 - **Lower R²** (0.289 vs 0.368): Explains less variance
   - Possible overfitting or insufficient tuning
 
+#### XGBoost
+- **MAE (0.070)**: Good average accuracy, between Linear Regression and Random Forest
+- **RMSE (0.187)**: Similar to Random Forest, indicates some large errors
+- **R² (0.278)**: Lower than Linear Regression, similar to Random Forest
+  - May benefit from hyperparameter tuning
+  - Gradient boosting approach shows promise
+
+#### Elastic Net
+- **MAE (0.123)**: Higher error than other models
+- **RMSE (0.220)**: Highest error among all models
+- **R² (-0.003)**: Negative R² indicates model performs worse than baseline
+  - Current hyperparameters (alpha=1.0, l1_ratio=0.5) may be too aggressive
+  - Requires tuning to find optimal regularization strength
+  - Despite poor performance, useful for addressing multicollinearity
+
 ### Conclusion
-**Linear Regression performs better overall** - better R² and RMSE indicate it generalizes better to unseen data.
+**Linear Regression performs best overall** - highest R² (0.368) and best RMSE (0.175) indicate it generalizes best to unseen data. Random Forest has the best MAE (0.068) but struggles with variance explanation. XGBoost shows competitive performance and may improve with tuning. Elastic Net requires hyperparameter optimization to be effective.
 
 ---
 
@@ -177,22 +217,27 @@ Selected **10 features** for modeling:
 ## 📊 Visualizations Analysis
 
 ### 1. Predicted vs Actual Scatter Plots
-- **Purpose**: Visual assessment of prediction accuracy
+- **Purpose**: Visual assessment of prediction accuracy for all models
+- **Layout**: 2x2 grid displaying all 4 models (Linear Regression, Random Forest, XGBoost, Elastic Net)
 - **Interpretation**: 
   - Points closer to red diagonal line = better predictions
-  - Both models show reasonable fit with some scatter
-  - Linear Regression likely shows tighter clustering
+  - All models show reasonable fit with some scatter
+  - Linear Regression shows tightest clustering around diagonal
+  - Elastic Net shows more dispersion (reflecting lower performance)
 
 ### 2. Residual Plots
-- **Purpose**: Check for prediction bias and patterns
+- **Purpose**: Check for prediction bias and patterns across all models
+- **Layout**: 2x2 grid displaying residuals for all 4 models
 - **Interpretation**:
   - Random scatter around zero = good (no systematic bias)
   - Patterns (curves, clusters) = model missing relationships
-  - Both models should show relatively random residuals
+  - Linear Regression and Random Forest show relatively random residuals
+  - XGBoost residuals similar to Random Forest
+  - Elastic Net shows more systematic patterns (needs tuning)
 
 ### 3. Feature Importance Bar Chart
 - **Purpose**: Visualize which features Random Forest considers most important
-- **Interpretation**: Clear dominance of xG Per 90 feature
+- **Interpretation**: Clear dominance of xG Per 90 feature (60.8% importance)
 
 ---
 
@@ -264,10 +309,10 @@ Selected **10 features** for modeling:
 
 ### Medium-Term Enhancements
 
-4. **Additional Models**
-   - **XGBoost Regressor**: State-of-the-art for tabular data
-   - **Elastic Net**: Combines Ridge + Lasso (handles multicollinearity)
-   - **Neural Network**: If more data available
+4. **Additional Models** ✅ **IMPLEMENTED**
+   - ✅ **XGBoost Regressor**: State-of-the-art for tabular data - **Now implemented**
+   - ✅ **Elastic Net**: Combines Ridge + Lasso (handles multicollinearity) - **Now implemented**
+   - **Neural Network**: If more data available (future enhancement)
 
 5. **Advanced Evaluation**
    - **Cross-Validation**: 5-fold or 10-fold CV for robust metrics
@@ -332,7 +377,8 @@ This project demonstrates:
 - **Libraries**:
   - `pandas`: Data manipulation
   - `numpy`: Numerical operations
-  - `scikit-learn`: Machine learning models
+  - `scikit-learn`: Machine learning models (Linear Regression, Random Forest, Elastic Net)
+  - `xgboost`: XGBoost Regressor (optional, falls back to GradientBoostingRegressor)
   - `matplotlib`: Basic plotting
   - `seaborn`: Statistical visualizations
 - **Environment**: Jupyter Notebook
@@ -343,25 +389,30 @@ This project demonstrates:
 ## 📊 Final Summary
 
 ### Key Findings
-1. **xG Per 90 is the strongest predictor** of Goals Per 90 (60.8% importance)
-2. **Linear Regression outperforms Random Forest** for this task (R² = 0.368 vs 0.289)
+1. **xG Per 90 is the strongest predictor** of Goals Per 90 (60.8% importance in Random Forest)
+2. **Linear Regression outperforms all other models** for this task (R² = 0.368)
 3. **Model explains ~37% of variance** - moderate performance, typical for sports analytics
-4. **Progressive Receives** positively impacts goal-scoring
-5. **Age has minimal impact** on goal-scoring rate
+4. **Random Forest has best MAE** (0.068) but lower R², indicating overfitting risk
+5. **XGBoost shows competitive performance** (R² = 0.278) and may improve with tuning
+6. **Elastic Net requires hyperparameter optimization** to address multicollinearity effectively
+7. **Progressive Receives** positively impacts goal-scoring
+8. **Age has minimal impact** on goal-scoring rate
 
 ### Business Insights
 - **Expected Goals (xG) is highly predictive** - validates advanced analytics
 - **Playing time matters** - more minutes = more goal opportunities
 - **Progressive actions** (especially receives) correlate with scoring
-- **Simple linear model sufficient** - no need for complex non-linear models
+- **Simple linear model sufficient** - Linear Regression performs best, suggesting linear relationships dominate
+- **Multiple model approach** - Comparing 4 models provides robust evaluation and insights
 
 ### Project Status
 ✅ **Complete and Functional** - All objectives achieved
 - Data loaded and explored
 - Features selected and prepared
-- Models trained and evaluated
-- Results visualized and interpreted
+- **4 models trained and evaluated** (Linear Regression, Random Forest, XGBoost, Elastic Net)
+- Results visualized and interpreted (all models included in visualizations)
 - Predictions saved for further analysis
+- **Prediction functions support all 4 models** for flexible player evaluation
 
 ---
 
@@ -380,8 +431,15 @@ DMProjet/
 
 ## 🔗 Next Steps
 
-1. **Implement recommendations** (feature selection, model tuning)
-2. **Try alternative models** (XGBoost, Gradient Boosting)
+1. **Hyperparameter Tuning**
+   - Tune Elastic Net (alpha, l1_ratio) to improve performance
+   - Optimize XGBoost parameters (learning_rate, max_depth, n_estimators)
+   - Use GridSearchCV or RandomizedSearchCV for systematic tuning
+
+2. **Feature Selection**
+   - Remove redundant xG features to address multicollinearity
+   - Test model performance with reduced feature set
+
 3. **Extend to other targets** (Assists, Combined metrics)
 4. **Add more data** (opponent strength, team quality)
 5. **Deploy model** (if needed for production use)
